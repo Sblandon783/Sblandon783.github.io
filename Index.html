@@ -1,0 +1,151 @@
+<html>
+
+<head>
+   <!-- Load TensorFlow.js -->
+   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+   <!-- Load Posenet -->
+   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
+   <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+   <div style="height: 50px;display:flex;justify-content: center;align-items: center;color:white;
+   background: rgba(0, 0, 0, 0.433);border-radius: 10px;">
+      <h1>Predict Posture</h1>
+   </div>
+   <br>
+   <div style="display:flex;flex-direction: row;background:rgba(49, 49, 49, 0.603);border-radius:20px">
+      <div style="width: 50%;display: flex;justify-content: center;align-items: center;">
+         <div
+            style="background-color:rgb(255, 255, 255);justify-content: center;display: flex;height:580px;border-radius: 10px;width: 600px;align-items: center;">
+            <div id="container">
+               <div style="height:50px;width:100%;display: flex;
+               justify-content: center;align-items: center;flex-direction: column;">
+                  <div style="height:8px;width: 80px;background-color: rgb(66, 66, 66);border-radius: 30px;"></div>
+                  <div style="height:15px;width: 15px;background-color: rgb(90, 90, 90);border-radius: 30px;margin-top: 3px;"></div>
+               </div>
+               <div id="first_div_player">
+                  <button onclick="camera()" id="btn_start_camera" style="height: 50px;">Start camera</button>
+               </div>
+               <div id="div_player" style="display: none;background: black;height: 480px;width: 503px;">
+                  <video id="player" autoplay></video>
+                  <button id="capture-button" title="Take a picture" style="margin-bottom: -30px;"></button>
+               </div>
+
+            </div>
+         </div>
+      </div>
+
+      <div style="display: flex;height: 610px;flex-direction: column;;padding: 10px;width: 50%;">
+         <div class="result_1">
+            <h3 style="text-align:center">Results Found</h3>
+            <div id="parts_body" style="margin: auto;width:90%;overflow: auto;display: grid; grid-template-columns: 3fr 3fr 3fr 3fr;">
+
+            </div>
+         </div>
+         <div style="height: 10px;"></div>
+         <div class="result_1 result_2">
+            <h3 style="text-align:center">Result Image</h3>
+            <canvas id="myCanvas" width="510" height="400" style="margin-left:20px">
+         </div>
+
+      </div>
+   </div>
+   <canvas id="output"></canvas>
+   <!-- Insert fallback content here -->
+   </canvas>
+   <br>
+   <div style="height: 30px;display:flex;justify-content: center;align-items: center;color:white">
+      <h5>Create by Sblandon</h5>
+   </div>
+
+
+</body>
+<!-- Place your code in the script tag below. You can also use an external .js file -->
+
+<script>
+   async function test(photo) {
+      var imageElement = new Image();
+      imageElement.src = photo;
+      const imageScaleFactor = 0.50;
+      const flipHorizontal = false;
+      const outputStride = 16;
+      // load the posenet model
+      tf.setBackend('cpu');
+      const net = await posenet.load();
+      const pose = await net.estimateSinglePose(imageElement, imageScaleFactor, flipHorizontal, outputStride);
+      load(pose, photo);
+   }
+   function load(pose, photo) {
+      var image = new Image();
+      image.src = photo;
+      let colors = ['#ffffff', '#800000','#ff0000', '#800080', '#ff00ff','#008000',	 
+                    '#00ff00'	,'#808000','#ffff00','#000080','#0000ff', '#008080','#00ffff']
+      var canvas = document.getElementById("myCanvas");
+      var ctx = canvas.getContext("2d");
+      image.onload = function () {
+         ctx.drawImage(image, 0, 0);
+         let x = 0;
+         pose.keypoints.forEach(element => {
+            if (element.score >= 0.6) {
+               x = x+1;
+               if(x>=12){
+                  x=0;
+               }
+               ctx.fillStyle = colors[x];
+               ctx.fillRect(element.position.x, element.position.y, 10, 10);
+               document.getElementById("parts_body").innerHTML += `               
+               <div style="background:${colors[x]};height: 30px;width: 100px;text-align: center;padding-top: 10px;border-radius: 10px;margin-top: 10px;">
+                  ${element.part}
+               </div>`;
+            }
+         });
+
+      };
+   }
+   function camera() {
+      const player = document.getElementById('player');
+      const captureButton = document.getElementById('capture-button');
+      const outputCanvas = document.getElementById('output');
+      const context = outputCanvas.getContext('2d');
+
+      let conta = document.getElementById('div_player');
+      document.getElementById('first_div_player').style.display = "none";
+      conta.style.display = "initial";
+      document.getElementById("btn_start_camera").style.display = "none";
+      navigator.mediaDevices.
+         getUserMedia({ video: true }).
+         then(stream => {
+            player.srcObject = stream;
+         }).catch(error => {
+            console.error('Can not get an access to a camera...', error);
+         });
+      captureButton.addEventListener('click', (e) => {
+         // Get the real size of the picture
+         const imageWidth = player.offsetWidth;
+         const imageHeight = player.offsetHeight;
+
+         // Make our hidden canvas the same size
+         outputCanvas.width = imageWidth;
+         outputCanvas.height = imageHeight;
+
+         // Draw captured image to the hidden canvas
+         context.drawImage(player, 0, 0, imageWidth, imageHeight);
+         var photo = outputCanvas.toDataURL(); //Esta es la foto, en base 64
+         // A bit of magic to save the image to a file 
+         console.log(photo);
+
+
+         var img = new Image();
+         img.src = photo;
+
+         /**player.pause();
+         player.srcObject.getTracks()[0].stop();
+         conta.style.display = "none";
+         */
+         test(photo);
+      });
+   }
+</script>
+
+</html>
